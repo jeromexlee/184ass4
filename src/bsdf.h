@@ -42,7 +42,7 @@ inline double cos_phi(const Vector3D& w) {
 
 inline double sin_phi(const Vector3D& w) {
   double sinTheta = sin_theta(w);
-  if (sinTheta) return 0.0;
+  if (sinTheta == 0.0) return 0.0;
   return clamp(w.y / sinTheta, -1.0, 1.0);
 }
 

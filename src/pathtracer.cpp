@@ -530,6 +530,41 @@ static double adder = 1.;
 
 
 
+// Spectrum PathTracer::estimate_direct_lighting(const Ray& r, const Intersection& isect) {
+
+//   // TODO Part 3
+
+//   // make a coordinate system for a hit point
+//   // with N aligned with the Z direction.
+//   Matrix3x3 o2w;
+//   make_coord_space(o2w, isect.n);
+//   Matrix3x3 w2o = o2w.T();
+
+//   // w_out points towards the source of the ray (e.g.,
+//   // toward the camera if this is a primary ray)
+//   const Vector3D& hit_p = r.o + r.d * isect.t;
+//   const Vector3D& w_out = w2o * (-r.d);
+
+//   Spectrum L_out;
+
+//   return L_out;
+// }
+
+// Spectrum PathTracer::estimate_indirect_lighting(const Ray& r, const Intersection& isect) {
+
+//   // TODO Part 4
+
+//   Matrix3x3 o2w;
+//   make_coord_space(o2w, isect.n);
+//   Matrix3x3 w2o = o2w.T();
+
+//   Vector3D hit_p = r.o + r.d * isect.t;
+//   Vector3D w_out = w2o * (-r.d);
+
+//   return Spectrum();
+
+// }
+
 Spectrum PathTracer::estimate_direct_lighting(const Ray& r, const Intersection& isect) {
 
   // TODO Part 3
@@ -545,8 +580,29 @@ Spectrum PathTracer::estimate_direct_lighting(const Ray& r, const Intersection& 
   const Vector3D& hit_p = r.o + r.d * isect.t;
   const Vector3D& w_out = w2o * (-r.d);
 
-  Spectrum L_out;
-
+  Spectrum L_out = Spectrum(), L_s, L_temp;
+  float distToLight, pdf;
+  Vector3D w_in, wi;
+  int num_samples = ns_area_light;
+  for(SceneLight *l : scene->lights){
+    L_temp = Spectrum(); //Bug
+    if (l->is_delta_light()){
+      num_samples = 1;
+    }
+    for(int i = 0; i < num_samples; i++){
+      L_s = l->sample_L(hit_p,&wi,&distToLight,&pdf);
+      w_in =w2o*wi;
+      if(w_in.z<0){
+        continue;
+      }
+      if(!bvh->intersect(Ray(EPS_D*wi+hit_p,wi,distToLight))){
+        L_temp+=(isect.bsdf->f(w_out,w_in)*L_s*w_in.z)/pdf;
+      }
+      
+    }
+   L_temp/=num_samples; 
+   L_out+=L_temp;
+  }
   return L_out;
 }
 
@@ -561,8 +617,23 @@ Spectrum PathTracer::estimate_indirect_lighting(const Ray& r, const Intersection
   Vector3D hit_p = r.o + r.d * isect.t;
   Vector3D w_out = w2o * (-r.d);
 
-  return Spectrum();
-
+  Vector3D w_in;
+  float pdf;
+  Spectrum in;
+  Spectrum sample = isect.bsdf->sample_f(w_out, &w_in, &pdf);
+  float prr = 10*sample.illum();
+  // printf("%f\n", prr);
+  // if(prr>1) prr = 1;
+  // if(prr<0) prr = 0;
+  prr = clamp(prr, 0, 1);
+  if(coin_flip(prr)){
+    Ray rs = Ray(EPS_D*o2w*w_in+hit_p,o2w*w_in,(int)r.depth-1);
+    in = trace_ray(rs,isect.bsdf->is_delta());
+    return sample*in*abs(w_in.z)/(pdf*prr);
+  }
+  else{
+    return Spectrum();  
+  }
 }
 
 Spectrum PathTracer::trace_ray(const Ray &r, bool includeLe) {
