@@ -37,23 +37,60 @@ static const double scale = .001;
 
 bool LensElement::pass_through(Ray &r, double &prev_ior) const {
   // Part 1 Task 1: Implement this. It takes r and passes it through this lens element.
+  // printf("%f\n",(r.o.z));
+  // printf("Center: %f, Radius: %f, ior: %f, aperture: %f\n",center,radius,ior,aperture);
+  Vector3D hit_p;
+  if(intersect(r,&hit_p)){
+    if(sqrt(pow(hit_p.x,2)+pow(hit_p.y,2)) > aperture/2) {
+      printf("555-----> False1 TAT\n");
+      return false;
+    }
+    printf("LOL---->True =v=\n");
+    refract(r, hit_p, prev_ior);
+    return true;
+  }
+  else {
+    printf("555-----> False2 TAT\n");
+    return false;
+  }
   
-
-  return true;
 }
 bool LensElement::intersect(const Ray &r, Vector3D *hit_p) const {
   // Part 1 Task 1: Implement this. It intersects r with this spherical lens elemnent 
   // (or aperture diaphragm). You'll want to reuse some sphere intersect code.
-
-
-  return true;
+  Vector3D o = Vector3D(0,0,center);
+  double a = dot(r.d,r.d),
+         b = 2*dot(r.o - o, r.d),
+         c = dot(r.o-o,r.o-o) - pow(radius,2),
+         delta = b*b-4*a*c,
+         t1 = 0,
+         t2 = 0,
+         t = 0;
+  
+  if(delta >= 0){
+    t2 = (-b+sqrt(delta))/(2*a);
+    t1 = (-b-sqrt(delta))/(2*a);
+    if(t1>=r.min_t && t1<=r.max_t){
+      t = t1;
+    }
+    else if(t2>=r.min_t && t2<=r.max_t){
+      t = t2;
+    }
+    else return false;
+    *hit_p = r.o+t*r.d;
+    r.max_t = t;
+    return true;
+  }
+  else {
+    return false;
+  }
   
 }
 bool LensElement::refract(Ray& r, const Vector3D& hit_p, const double& prev_ior) const {
   // Part 1 Task 1: Implement this. It refracts the Ray r with this lens element or 
   // does nothing at the aperture element.
   // You'll want to consult your refract function from the previous assignment.
-
+  
 
 
   return true;
@@ -139,7 +176,10 @@ void Lens::set_focus_params() {
 
 bool Lens::trace(Ray &r, std::vector<Vector3D> *trace) const {
   // Part 1 Task 1: Implement this. It traces a ray from the sensor out into the world.
-
+  // for(LensElement el : elts){
+  //   el.pass_through(r,el.ior);
+  // }
+  elts[0].pass_through(r,elts[0].ior);
 
 
   return true;
