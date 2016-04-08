@@ -27,11 +27,6 @@ static uint32_t blue_channel(uint32_t color) {
 static const double scale = .001;
 
 
-
-
-
-
-
 /****** LensElement functions ******/
 
 
@@ -42,15 +37,17 @@ bool LensElement::pass_through(Ray &r, double &prev_ior) const {
   Vector3D hit_p;
   if(intersect(r,&hit_p)){
     if(sqrt(pow(hit_p.x,2)+pow(hit_p.y,2)) > aperture/2) {
-      printf("555-----> False1 TAT\n");
+      // printf("555-----> False1 TAT\n");
       return false;
     }
-    printf("LOL---->True =v=\n");
-    refract(r, hit_p, prev_ior);
+    // printf("LOL---->True =v=\n");
+    if(refract(r, hit_p, prev_ior))
+      prev_ior = ior;
+    // printf("%f,%f,%f\n",hit_p.x,hit_p.y,hit_p.z );
     return true;
   }
   else {
-    printf("555-----> False2 TAT\n");
+    // printf("555-----> False2 TAT\n");
     return false;
   }
   
@@ -70,15 +67,26 @@ bool LensElement::intersect(const Ray &r, Vector3D *hit_p) const {
   if(delta >= 0){
     t2 = (-b+sqrt(delta))/(2*a);
     t1 = (-b-sqrt(delta))/(2*a);
-    if(t1>=r.min_t && t1<=r.max_t){
-      t = t1;
+    if(r.d.z <0){
+      if (radius<0){
+        t = t1;
+      } else{
+        t = t2;
+      }
     }
-    else if(t2>=r.min_t && t2<=r.max_t){
-      t = t2;
+    else {
+      if (radius<0){
+        t = t2;
+      } else{
+        t = t1;
+      }
+    }
+    if(t>=r.min_t && t<=r.max_t){
+
     }
     else return false;
     *hit_p = r.o+t*r.d;
-    r.max_t = t;
+    // r.max_t = t;
     return true;
   }
   else {
@@ -90,10 +98,50 @@ bool LensElement::refract(Ray& r, const Vector3D& hit_p, const double& prev_ior)
   // Part 1 Task 1: Implement this. It refracts the Ray r with this lens element or 
   // does nothing at the aperture element.
   // You'll want to consult your refract function from the previous assignment.
+  Matrix3x3 o2w;
+  Vector3D normal;
+  // printf("%f,%f,%f\n", hit_p.x,hit_p.y,hit_p.z);
+  if(r.d.z <0){
+    if(radius<0){
+      normal = hit_p - Vector3D(0,0,center);
+    }
+    else{
+      normal = Vector3D(0,0,center) - hit_p;
+    }
+  }
+  else{
+    if(radius<0){
+      normal = Vector3D(0,0,center) - hit_p;
+    }
+    else{
+      
+      normal = hit_p - Vector3D(0,0,center);
+    }
+  }
+  make_coord_space(o2w, normal);
+  Matrix3x3 w2o = o2w.T();
+  Vector3D wi;
   
 
-
-  return true;
+  // printf("%f,%f\n", r.d.z,wo.z);
+  double n = 0.0;
+  if(r.d.z<0){
+    n = prev_ior/ior;
+  }
+  else {
+    n = ior/prev_ior;
+  }
+  Vector3D wo = w2o * (-r.d);  
+  wi = Vector3D(-sin_theta(wo)*cos_phi(wo)*n,
+                 -sin_theta(wo)*sin_phi(wo)*n,
+                 -sqrt(1 - pow(sin_theta(wo),2)*(n*n)));
+  if(sin_theta(wo)*prev_ior>= ior)
+    return false;
+  else{
+    r.d = o2w*wi;
+    r.o = hit_p;
+    return true;
+  }
 
 }
 
@@ -176,10 +224,14 @@ void Lens::set_focus_params() {
 
 bool Lens::trace(Ray &r, std::vector<Vector3D> *trace) const {
   // Part 1 Task 1: Implement this. It traces a ray from the sensor out into the world.
-  // for(LensElement el : elts){
-  //   el.pass_through(r,el.ior);
-  // }
-  elts[0].pass_through(r,elts[0].ior);
+  double prev_ior = 1.0;
+  for(LensElement el : elts){
+    if(el.pass_through(r,prev_ior)){
+      // prev_ior = el.ior;
+      trace->push_back(r.o);
+    }
+  }
+  // elts[0].pass_through(r,prev_ior);
 
 
   return true;
@@ -188,9 +240,25 @@ bool Lens::trace(Ray &r, std::vector<Vector3D> *trace) const {
 bool Lens::trace_backwards(Ray &r, std::vector<Vector3D> *trace) const {
   // Part 1 Task 1: Implement this. It traces a ray from the world backwards through 
   // the lens towards the sensor.
+  double prev_ior = 1.0;
+  for (int i = elts.size()-1;i>=0;i--){
+    if(i != 0){
+      prev_ior = elts[i-1].ior;
+    } else{
+      prev_ior = 1.0;
+    }
+    if(elts[i].pass_through(r,prev_ior)){
+      // prev_ior = elts[i+1].ior;
+      trace->push_back(r.o);
+    }
+  }
 
+  //  for(LensElement el : elts){
+  //   printf("%f\n",el.ior );
+  // }
 
-
+  // elts[elts.size()-7].pass_through(r,prev_ior);
+  // trace->push_back(r.o);
   return true;
 }
 
