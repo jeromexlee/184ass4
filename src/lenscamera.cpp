@@ -205,12 +205,29 @@ void Lens::parse_lens_file(std::string filename) {
 }
 
 
-void Lens::set_focus_params() {
+void Lens::set_focus_params() {;
 
-  // Part 1 Task 2: Implement this. 
+  // Part 1 Task 2: Implement th  is. 
   // After this function is called, the three variables
   // infinity_focus, near_focus, and focal_length
   // should be set correctly.
+  Ray r = Ray(Vector3D(0.001,0,-9999999),Vector3D(0,0,1));
+  Ray ro = Ray(Vector3D(0.001,0,-9999999),Vector3D(0,0,1));
+  std::vector<Vector3D> trace;
+  trace_backwards(r,&trace);
+  Vector3D fp = r.o + (-r.o.x/r.d.x)*r.d;
+  infinity_focus = fp.z;
+  Vector3D pp = r.o+((ro.o.x-r.o.x)/r.d.x)*r.d;
+  focal_length = abs(pp.z-fp.z);
+  std::vector<Vector3D> trace2;
+  ro = Ray(Vector3D(0,0,-5*focal_length),Vector3D(0.00001,0,1));
+  trace_backwards(ro,&trace2);
+  Vector3D nf = ro.o + (-ro.o.x/ro.d.x)*ro.d;
+  near_focus = nf.z;
+  // printf("%f,%f,%f\n",fp.x,fp.y,fp.z );
+
+
+
 
 
 
@@ -252,6 +269,7 @@ bool Lens::trace_backwards(Ray &r, std::vector<Vector3D> *trace) const {
       trace->push_back(r.o);
     }
   }
+  
 
   //  for(LensElement el : elts){
   //   printf("%f\n",el.ior );
