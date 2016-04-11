@@ -491,6 +491,9 @@ void LensCamera::autofocus() {
   double c = 0;
   double best_value;
   double b = (curr_lens().near_focus - curr_lens().infinity_focus)/15;
+  double C = sqrt(36*36 + 24*24) / sqrt(screenW*screenW + screenH*screenH);
+  double fnum = curr_lens().focal_length/curr_lens().ap_radius;
+  b = min(C*fnum,b);
   for(curr_lens().sensor_depth  = curr_lens().infinity_focus;
       curr_lens().sensor_depth <= curr_lens().near_focus;
       curr_lens().sensor_depth += b){
