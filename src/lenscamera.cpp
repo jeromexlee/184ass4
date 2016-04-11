@@ -54,6 +54,8 @@ bool LensElement::pass_through(Ray &r, double &prev_ior) const {
     if(refract(r, hit_p, prev_ior)){
       // if(radius > 0)
       prev_ior = ior;
+    } else{
+      return false;
     }
 
     // printf("%f,%f,%f\n",hit_p.x,hit_p.y,hit_p.z );
@@ -421,12 +423,42 @@ static double mean_green(const ImageBuffer& ib) {
   return mean;
 }
 
+// static double cal_variance(const ImageBuffer& ib,uint32_t (*fn) (uint32_t)) {
+//   double sum = 0;
+//   for (int i = 0; i < ib.w * ib.h; ++i) {
+//       sum += fn(ib.data[i]);
+//   }
+//   double mean = sum / (ib.w * ib.h);
+//   sum = 0;
+//   for (int i = 0; i < ib.w * ib.h; ++i) {
+//       sum += pow(fn(ib.data[i])-mean,2);
+//   }
+  
+//   return sum / (ib.w * ib.h);
+// }
+
 double LensCamera::focus_metric(const ImageBuffer& ib) const {
 
   // Part 2 Task 1: Implement this. Design a metric to judge how "in-focus"
   // the image patch stored in the provided ImageBuffer is.
+  double sumr=0,sumg=0,sumb=0,
+         meanr=0,meang=0,meanb=0;
+  for (int i = 0; i < ib.w * ib.h; ++i) {
+      sumr += red_channel(ib.data[i]);
+      sumg += green_channel(ib.data[i]);
+      sumb += blue_channel(ib.data[i]);
+  }
+  meanr = sumr/ (ib.w * ib.h); meang = sumg/(ib.w * ib.h); meanb = sumb/(ib.w * ib.h);
+  sumr=0; sumg=0; sumb=0;
+  for (int i = 0; i < ib.w * ib.h; ++i) {
+      sumr += pow(red_channel(ib.data[i])-meanr,2);
+      sumg += pow(green_channel(ib.data[i])-meang,2);
+      sumb += pow(blue_channel(ib.data[i])-meanb,2);
+  }
+  return (sumr + sumg + sumb)/(ib.w * ib.h);
 
-  return mean_green(ib); //  A meaningless standin
+
+  // return cal_variance(ib,green_channel)+cal_variance(ib,red_channel)+cal_variance(ib,blue_channel); //  A meaningless standin
 }
 
 
@@ -445,10 +477,24 @@ void LensCamera::autofocus() {
   // Example code. Nothing to do with your actual implementation except to 
   // demonstrate functionality.
   ImageBuffer ib;
-  curr_lens().sensor_depth += 1;
+  double a = -INF_D;
+  double c = 0;
+  double best_value;
+  double b = (curr_lens().near_focus - curr_lens().infinity_focus)/15;
+  for(curr_lens().sensor_depth  = curr_lens().infinity_focus;
+      curr_lens().sensor_depth <= curr_lens().near_focus;
+      curr_lens().sensor_depth += b){
+    pt->raytrace_cell(ib);
+    c = focus_metric(ib);
+    cout << "[LensCamera] The variance is " << c << " for sensor depth " << curr_lens().sensor_depth << endl;
+    if(c>a){
+      a = c;
+      best_value = curr_lens().sensor_depth;
+    }
+  }
+  curr_lens().sensor_depth = best_value;
+  cout << "[LensCamera] The best sensor depth is " << best_value << endl;
   pt->raytrace_cell(ib);
-  cout << "[LensCamera] The mean green is " << focus_metric(ib) << endl;
-
 
   
 }
