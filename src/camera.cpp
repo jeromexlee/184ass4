@@ -160,7 +160,7 @@ void Camera::load_settings(string filename) {
   cout << "[Camera] Loaded settings from " << filename << endl;
 }
 
-Ray Camera::generate_ray(double x, double y) const {
+Ray Camera::generate_ray(double x, double y, int& rays_tried, double & coss) const {
 
   // Part 1, Task 2:
   // compute position of the input sensor sample coordinate on the
@@ -171,6 +171,8 @@ Ray Camera::generate_ray(double x, double y) const {
   x = 2*(x-.5); y = 2*(y-.5);
   Ray r(pos,(c2w*Vector3D(x*tan(radians(hFov)*.5),y*tan(radians(vFov)*.5),-1)).unit());
   r.min_t = nClip; r.max_t = fClip;
+  rays_tried = 1;
+  coss = 1;
   return r;
 
 }

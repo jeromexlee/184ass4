@@ -338,7 +338,7 @@ LensCamera::LensCamera(): pt(NULL) {
 }
 
 
-Ray LensCamera::generate_ray(double x, double y) const {
+Ray LensCamera::generate_ray(double x, double y, int& rays_tried, double & coss) const {
 
   Ray r = Ray(Vector3D(),Vector3D() );
   if (lens_ind >= 0) {
@@ -351,13 +351,21 @@ Ray LensCamera::generate_ray(double x, double y) const {
     double film_w = film_d * screenW / screen_d;
     double film_h = film_d * screenH / screen_d;
     Vector3D sensor_point(-(x-0.5)*film_w, -(y-0.5)*film_h, l.sensor_depth);
-    Vector3D bls = l.back_lens_sample();
+    for(rays_tried = 1; rays_tried<=20;rays_tried++){
+      Vector3D bls = l.back_lens_sample();
     // printf("%f,%f,%f\n",bls.x,bls.y,bls.z );
     // printf("%f\n",l.elts[0].aperture/2);
-    r = Ray(sensor_point,(bls - sensor_point).unit());
-    std::vector<Vector3D> trace1;
-    if(!l.trace(r,&trace1)){
-      r.d = Vector3D(0,0,1);
+      r = Ray(sensor_point,(bls - sensor_point).unit());
+      std::vector<Vector3D> trace1;
+      coss = pow(r.d.z,4);
+      if(l.trace(r,&trace1)){
+        // r.d = Vector3D(0,0,1);
+        break;
+      }
+      else{
+        coss = 0;
+      }
+
     }
     // l.trace(r,&trace1);
 
@@ -374,6 +382,8 @@ Ray LensCamera::generate_ray(double x, double y) const {
     // Generate ray for a pinhole camera. Same as in the previous assignment.
     x = 2*(x-.5); y = 2*(y-.5);
     r = Ray(pos,(c2w*Vector3D(x*tan(radians(hFov)*.5),y*tan(radians(vFov)*.5),-1)).unit());
+    rays_tried = 1;
+    coss = 1;
 
   }
 

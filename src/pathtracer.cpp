@@ -677,14 +677,16 @@ Spectrum PathTracer::raytrace_pixel(size_t x, size_t y) {
 
   int num_samples = ns_aa; // total samples to evaluate
   Vector2D origin = Vector2D(x,y); // bottom left corner of the pixel
-
+  int rays_tried;
+  double coss;
   Spectrum s;
   for (int i = 0; i < num_samples; ++i) {
     Vector2D p = origin + (ns_aa>1?gridSampler->get_sample():Vector2D(.5,.5));
-    Ray r = camera->generate_ray(p.x/sampleBuffer.w, p.y/sampleBuffer.h);
+    Ray r = camera->generate_ray(p.x/sampleBuffer.w, p.y/sampleBuffer.h,rays_tried,coss);
     r.depth = max_ray_depth;
-    s += trace_ray(r,true);
+    s += trace_ray(r,true)/rays_tried*coss;
   }
+
   return s * (1./ns_aa);
 
 }

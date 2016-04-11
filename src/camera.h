@@ -86,7 +86,7 @@ class Camera {
    * \param x x-coordinate of the ray sample in the view plane
    * \param y y-coordinate of the ray sample in the view plane
    */
-  virtual Ray generate_ray(double x, double y) const;
+  virtual Ray generate_ray(double x, double y, int& rays_tried, double & coss) const;
 
  protected:
   // Computes pos, screenXDir, screenYDir from target, r, phi, theta.
