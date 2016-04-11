@@ -490,21 +490,39 @@ void LensCamera::autofocus() {
   double a = -INF_D;
   double c = 0;
   double best_value;
-  double b = (curr_lens().near_focus - curr_lens().infinity_focus)/15;
+  double nf = curr_lens().near_focus;
+  double inf = curr_lens().infinity_focus;
+  double b = (nf - inf)/10;
   double C = sqrt(36*36 + 24*24) / sqrt(screenW*screenW + screenH*screenH);
   double fnum = curr_lens().focal_length/curr_lens().ap_radius;
   b = min(C*fnum,b);
-  for(curr_lens().sensor_depth  = curr_lens().infinity_focus;
-      curr_lens().sensor_depth <= curr_lens().near_focus;
-      curr_lens().sensor_depth += b){
-    pt->raytrace_cell(ib);
-    c = focus_metric(ib);
-    cout << "[LensCamera] The variance is " << c << " for sensor depth " << curr_lens().sensor_depth << endl;
-    if(c>a){
-      a = c;
-      best_value = curr_lens().sensor_depth;
+  double s1 = inf;
+  double s2 = nf;
+  while((s2-s1)>b){
+    for(curr_lens().sensor_depth = s1; curr_lens().sensor_depth <= s2; curr_lens().sensor_depth += ((s2-s1)/5)){
+      pt->raytrace_cell(ib);
+      c = focus_metric(ib);  
+      cout << "[LensCamera] The variance is " << c << " for sensor depth " << curr_lens().sensor_depth << endl;
+      if(c>a){
+        a = c;
+        best_value = curr_lens().sensor_depth;
+      }
+    }
+    if(abs(best_value-s1)<abs(best_value -s2)){
+      s2 = best_value;
+    }else {
+      s1 = best_value;
     }
   }
+  // for(curr_lens().sensor_depth  = inf; curr_lens().sensor_depth <= nf; curr_lens().sensor_depth += b){
+  //   pt->raytrace_cell(ib);
+  //   c = focus_metric(ib);
+  //   cout << "[LensCamera] The variance is " << c << " for sensor depth " << curr_lens().sensor_depth << endl;
+  //   if(c>a){
+  //     a = c;
+  //     best_value = curr_lens().sensor_depth;
+  //   }
+  // }
   curr_lens().sensor_depth = best_value;
   cout << "[LensCamera] The best sensor depth is " << best_value << endl;
   pt->raytrace_cell(ib);
