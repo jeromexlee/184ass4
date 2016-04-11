@@ -35,14 +35,27 @@ bool LensElement::pass_through(Ray &r, double &prev_ior) const {
   // printf("%f\n",(r.o.z));
   // printf("Center: %f, Radius: %f, ior: %f, aperture: %f\n",center,radius,ior,aperture);
   Vector3D hit_p;
+  if (radius == 0){
+    double t =(r.o.z - center)/r.d.z;
+    hit_p = r.o + t*r.d;
+    if(sqrt(pow(hit_p.x,2)+pow(hit_p.y,2)) > aperture/2){
+      return false;
+    }
+
+    return true;
+  }
+ 
   if(intersect(r,&hit_p)){
     if(sqrt(pow(hit_p.x,2)+pow(hit_p.y,2)) > aperture/2) {
       // printf("555-----> False1 TAT\n");
       return false;
     }
     // printf("LOL---->True =v=\n");
-    if(refract(r, hit_p, prev_ior))
+    if(refract(r, hit_p, prev_ior)){
+      // if(radius > 0)
       prev_ior = ior;
+    }
+
     // printf("%f,%f,%f\n",hit_p.x,hit_p.y,hit_p.z );
     return true;
   }
@@ -135,7 +148,7 @@ bool LensElement::refract(Ray& r, const Vector3D& hit_p, const double& prev_ior)
   wi = Vector3D(-sin_theta(wo)*cos_phi(wo)*n,
                  -sin_theta(wo)*sin_phi(wo)*n,
                  -sqrt(1 - pow(sin_theta(wo),2)*(n*n)));
-  if(sin_theta(wo)*prev_ior>= ior)
+  if(sin_theta(wo)*n>= 1)
     return false;
   else{
     r.d = o2w*wi;
@@ -242,15 +255,21 @@ void Lens::set_focus_params() {;
 bool Lens::trace(Ray &r, std::vector<Vector3D> *trace) const {
   // Part 1 Task 1: Implement this. It traces a ray from the sensor out into the world.
   double prev_ior = 1.0;
+  // bool b = true;
   for(LensElement el : elts){
     if(el.pass_through(r,prev_ior)){
       // prev_ior = el.ior;
+      
+      // return false;
       trace->push_back(r.o);
+    } else{
+       return false;
     }
+    
   }
   // elts[0].pass_through(r,prev_ior);
 
-
+  // printf("12312312323\n");
   return true;
 }
 
@@ -284,16 +303,21 @@ float Lens::focus_depth(float d) const {
 
   // Part 1 Task 2: Implement this. Should find the conjugate of a ray
   // starting from the sensor at depth d.
-
-  return 0;
+  Ray r = Ray(Vector3D(0,0,d),Vector3D(0.02,0,-1));
+  std::vector<Vector3D> trace1;
+  trace(r,&trace1);
+  Vector3D fd = r.o+(-r.o.x/r.d.x)*r.d;
+  return fd.z;
 }
 
 Vector3D Lens::back_lens_sample() const {
 
   // Part 1 Task 2: Implement this. Should return a point randomly sampled
   // on the back element of the lens (the element closest to the sensor)
+  double theta = 2*M_PI*random_uniform();
+  double r = elts[0].aperture*0.5*sqrt(random_uniform());
 
-  return Vector3D();
+  return Vector3D(r*cos(theta),r*sin(theta),elts[0].center - elts[0].radius);
 
 }
 
@@ -316,12 +340,24 @@ Ray LensCamera::generate_ray(double x, double y) const {
 
   Ray r = Ray(Vector3D(),Vector3D() );
   if (lens_ind >= 0) {
-
     // Part 1 Task 2: Implement this. It generates a ray from sensor pixel (x,y)
     // pointing toward the back element of the lens (use back_lens_sample) and traces
     // it through the Lens (using your "trace" function)
-
-
+    const Lens& l = lenses[lens_ind];
+    double film_d = sqrt(24*24+36*36);
+    double screen_d = sqrt(screenW*screenW + screenH*screenH);
+    double film_w = film_d * screenW / screen_d;
+    double film_h = film_d * screenH / screen_d;
+    Vector3D sensor_point(-(x-0.5)*film_w, -(y-0.5)*film_h, l.sensor_depth);
+    Vector3D bls = l.back_lens_sample();
+    // printf("%f,%f,%f\n",bls.x,bls.y,bls.z );
+    // printf("%f\n",l.elts[0].aperture/2);
+    r = Ray(sensor_point,(bls - sensor_point).unit());
+    std::vector<Vector3D> trace1;
+    if(!l.trace(r,&trace1)){
+      r.d = Vector3D(0,0,1);
+    }
+    // l.trace(r,&trace1);
 
 
     /***** end of your code ******/
