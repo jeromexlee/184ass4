@@ -1,6 +1,8 @@
 #include "lenscamera.h"
-
+#include "fstream"
 #include "image.h"
+#include <ctime>
+// #include <String>
 
 using namespace std;
 
@@ -240,8 +242,14 @@ void Lens::set_focus_params() {;
   Vector3D nf = ro.o + (-ro.o.x/ro.d.x)*ro.d;
   near_focus = nf.z;
   // printf("%f,%f,%f\n",fp.x,fp.y,fp.z );
-
-
+  std::string s = "focus_depth";
+  s.append(std::to_string(random_uniform()));
+  s.append(".txt");
+  ofstream fout(s);
+  for(double i = infinity_focus; i <= near_focus; i+=(near_focus- infinity_focus)/100){
+    fout << i << " " << focus_depth(i) << endl;
+  }
+  fout.close();
 
 
 
@@ -305,7 +313,7 @@ float Lens::focus_depth(float d) const {
 
   // Part 1 Task 2: Implement this. Should find the conjugate of a ray
   // starting from the sensor at depth d.
-  Ray r = Ray(Vector3D(0,0,d),Vector3D(0.02,0,-1));
+  Ray r = Ray(Vector3D(0,0,d),Vector3D(0.02,0,-1).unit());
   std::vector<Vector3D> trace1;
   trace(r,&trace1);
   Vector3D fd = r.o+(-r.o.x/r.d.x)*r.d;
@@ -499,11 +507,26 @@ void LensCamera::autofocus() {
   double s1 = inf;
   double s2 = nf;
   int i = 0;
+
+
+  std::string s = "part2lens";
+  s.append(std::to_string(lens_ind+1));
+  s.append(".txt");
+  ofstream fout(s);
+
+  std::clock_t start;
+    double duration;
+
+    start = std::clock();
+  //Speed upped method 
+
   while((s2-s1)>b){
     for(curr_lens().sensor_depth = s1; curr_lens().sensor_depth <= s2; curr_lens().sensor_depth += ((s2-s1)/8)){
       pt->raytrace_cell(ib);
       c = focus_metric(ib);  
+
       cout << "[LensCamera] The variance is " << c << " for sensor depth " << curr_lens().sensor_depth << endl;
+      fout << curr_lens().sensor_depth << " " << c << endl;
       if(c>a){
         a = c;
         best_value = curr_lens().sensor_depth;
@@ -523,29 +546,22 @@ void LensCamera::autofocus() {
     if(i == 3){
       break;
     }
-    // if(abs(best_value-s1)<abs(best_value -s2)){
-    //   if(best_value + ((s2-s1)/5) < nf){
-    //     s2 = best_value + ((s2-s1)/5);
-    //   } else {
-    //     s2 = best_value;
-    //   }
-    // }else {
-    //   if (best_value - ((s2-s1)/5) > inf){
-    //     s1 = best_value - ((s2-s1)/5);
-    //   }else {
-    //     s1 = best_value;
-    //   }
-    // }
   }
+
+  //regular method
   // for(curr_lens().sensor_depth  = inf; curr_lens().sensor_depth <= nf; curr_lens().sensor_depth += b){
   //   pt->raytrace_cell(ib);
   //   c = focus_metric(ib);
   //   cout << "[LensCamera] The variance is " << c << " for sensor depth " << curr_lens().sensor_depth << endl;
+  //   fout << curr_lens().sensor_depth << " " << c << endl;
   //   if(c>a){
   //     a = c;
   //     best_value = curr_lens().sensor_depth;
   //   }
   // }
+  duration = (std::clock() - start )/ (double) CLOCKS_PER_SEC;
+  std::cout<<"[LensCamera] The method takes "<< duration << "second." << endl;
+  fout.close();
   curr_lens().sensor_depth = best_value;
   cout << "[LensCamera] The best sensor depth is " << best_value << endl;
   pt->raytrace_cell(ib);
