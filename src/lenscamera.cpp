@@ -375,7 +375,13 @@ Ray LensCamera::generate_ray(double x, double y, int& rays_tried, double & coss)
       }
 
     }
-    // l.trace(r,&trace1);
+
+      
+    // rays_tried = 1;
+    // coss = 1;
+    // if(!l.trace(r,&trace1)){
+    //   r.d = Vector3D(0,0,1);
+    // }
 
 
     /***** end of your code ******/
